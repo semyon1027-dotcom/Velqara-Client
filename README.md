@@ -1,15 +1,16 @@
 # Velqara Client
 
-Free Expo/React Native companion app starter for Minecraft Bedrock.
+Android companion app and Bedrock add-on exporter for Minecraft Bedrock.
 
 ## What is included
 
-- Dark neon Russian/English UI.
-- Home screen, launcher action, module catalog, HUD preview, local profiles, settings.
-- All requested module categories with toggles and Ban risk labels for ESP/Ore vision/Free camera.
-- Local profile state and accent color controls.
-- Native Android version detection using PackageManager for `com.mojang.minecraftpe` (reads the installed package's real `versionName` and `versionCode`).
-- Native Android launch through `getLaunchIntentForPackage`, independent of Google Play country availability or installation source.
+- Dark neon Russian/English UI with module catalog, profiles, HUD preview and local settings.
+- Toggleable module configuration with Ban risk labels for ESP, Ore vision and Free camera.
+- Local profile storage through AsyncStorage.
+- Export button that generates a real `Velqara_Client.mcaddon` from the selected modules and opens Android's share/import sheet.
+- Behavior pack script for supported Bedrock Script API worlds: optional night vision (Fulbright), hit particles/sounds, kill sound, jump ring, action-bar potion/TNT/death/waypoint HUD.
+- Resource pack manifest and custom fog definition.
+- Minecraft launch/version actions are kept separate from Google Play availability; the app targets package `com.mojang.minecraftpe`.
 
 ## Run
 
@@ -18,12 +19,24 @@ npm install
 npx expo start
 ```
 
-Use Expo Go for the interface preview. The native detector is included in the project but is not available in Expo Go; build the app as a custom Android APK to use it.
-
 ## Build an APK
 
-Install the Android SDK and Java 17+, then run `npx expo prebuild -p android` and `npx expo run:android --variant release`, or configure EAS Build with an Expo account. This workspace did not have the Android SDK or Gradle installed, so a signed APK could not be produced here.
+```bash
+CI=1 npx expo prebuild --platform android --no-install
+cd android
+./gradlew assembleRelease --no-daemon
+```
+
+A GitHub Actions workflow in `.github/workflows/build-apk.yml` builds `app-release.apk` and uploads it as `velqara-client-release`.
+
+## Importing the Bedrock pack
+
+1. Install and open Velqara Client.
+2. Enable the modules you want.
+3. Tap **Экспортировать .mcaddon**.
+4. Choose Minecraft in the Android share sheet.
+5. In the world settings, activate both Velqara behavior and resource packs; enable Beta APIs if that version requests them.
 
 ## Limits
 
-The companion app can open Minecraft, read its installed package version, and store configuration profiles. It cannot by itself alter Bedrock rendering, memory, or gameplay. ESP, ore visibility, custom fog/sky and similar in-game features need a supported Bedrock add-on/resource pack or a permitted native integration; this starter provides UI and risk labels only and does not bypass anti-cheat.
+Bedrock add-ons cannot freely change the RenderDragon renderer or memory. Therefore X-ray through blocks, true ESP boxes, free camera, aspect-ratio forcing, custom FOV and item physics are not implemented by the exported pack. Server use can violate server rules; the app shows Ban risk labels and is intended for worlds where the owner permits the pack.
