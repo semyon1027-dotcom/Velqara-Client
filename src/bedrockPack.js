@@ -208,10 +208,17 @@ export function buildVelqaraMcaddon(config) {
 }
 
 export function bytesToBase64(bytes) {
-  let binary = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    const n = (a << 16) | (b << 8) | c;
+    output += alphabet[(n >> 18) & 63];
+    output += alphabet[(n >> 12) & 63];
+    output += i + 1 < bytes.length ? alphabet[(n >> 6) & 63] : '=';
+    output += i + 2 < bytes.length ? alphabet[n & 63] : '=';
   }
-  return globalThis.btoa(binary);
+  return output;
 }
