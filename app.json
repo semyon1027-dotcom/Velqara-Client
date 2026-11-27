@@ -7,12 +7,19 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.velqara.client",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/velqara_icon.png",
+        "backgroundColor": "#08090D"
+      }
     },
-    "plugins": ["./plugins/withVelqaraOverlay"],
+    "plugins": [
+      "./plugins/withVelqaraOverlay"
+    ],
     "extra": {
       "minecraftPackage": "com.mojang.minecraftpe",
       "minimumBedrockVersion": "1.26.60"
-    }
+    },
+    "icon": "./assets/velqara_icon.png"
   }
 }
