@@ -7,6 +7,7 @@ import { buildVelqaraMcaddon, bytesToBase64 } from './src/bedrockPack';
 import {
   Alert,
   Linking,
+  NativeModules,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -24,6 +25,7 @@ const CYAN = '#22D3EE';
 const BG = '#08090D';
 const CARD = '#11131B';
 const MUTED = '#9297A7';
+const Overlay = NativeModules.VelqaraOverlay;
 
 const moduleGroups = [
   {
@@ -99,6 +101,7 @@ export default function App() {
   const [accent, setAccent] = useState(PURPLE);
   const [storageReady, setStorageReady] = useState(false);
   const [packStatus, setPackStatus] = useState('');
+  const [overlayStatus, setOverlayStatus] = useState('Оверлей выключен');
 
   useEffect(() => {
     AsyncStorage.getItem('velqara.settings.v1').then((raw) => {
@@ -142,6 +145,25 @@ export default function App() {
       setPackStatus('Ошибка экспорта');
       Alert.alert('Не удалось создать пакет', String(error?.message || error));
     }
+  };
+
+  const enableOverlay = async () => {
+    if (!Overlay) {
+      Alert.alert('Нужна новая сборка', 'Системный оверлей доступен в новой Android-сборке Velqara.');
+      return;
+    }
+    try {
+      await Overlay.requestOverlayPermission();
+      await Overlay.startOverlay();
+      setOverlayStatus('Оверлей запущен');
+    } catch (_) {
+      Alert.alert('Разрешение нужно включить вручную', 'Открой разрешение «Показывать поверх других приложений» для Velqara Client и повтори.');
+    }
+  };
+
+  const disableOverlay = async () => {
+    try { await Overlay?.stopOverlay(); } catch (_) {}
+    setOverlayStatus('Оверлей выключен');
   };
 
   const openMinecraft = async () => {
@@ -200,6 +222,10 @@ export default function App() {
         <TouchableOpacity style={styles.primaryButton} onPress={exportBedrockPack}><Text style={styles.primaryText}>Экспортировать .mcaddon</Text></TouchableOpacity>
         {!!packStatus && <Text style={styles.packStatus}>{packStatus}</Text>}
       </Card>
+      <Card style={styles.overlayCard}>
+        <View style={styles.rowBetween}><View><Text style={styles.cardTitle}>Системный оверлей</Text><Text style={styles.muted}>{overlayStatus}</Text></View><Text style={styles.overlayIcon}>◉</Text></View>
+        <View style={styles.row}><TouchableOpacity style={styles.primarySmall} onPress={enableOverlay}><Text style={styles.primaryText}>Включить поверх</Text></TouchableOpacity><TouchableOpacity style={styles.outlineSmall} onPress={disableOverlay}><Text style={styles.outlineText}>Выключить</Text></TouchableOpacity></View>
+      </Card>
       <View style={styles.rowBetween}><Text style={styles.sectionTitle}>Активный профиль</Text><Pill active onPress={() => setTab('profiles')}>{profile}</Pill></View>
       <Card><Text style={styles.bigNumber}>{Object.values(enabled).filter(Boolean).length}</Text><Text style={styles.muted}>активных модулей</Text><View style={styles.moduleRow}>{Object.entries(enabled).filter(([, on]) => on).map(([name]) => <Pill key={name} active onPress={() => setTab('modules')}>{name}</Pill>)}</View></Card>
       <Text style={styles.sectionTitle}>Быстрые действия</Text>
@@ -244,5 +270,5 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG }, app: { flex: 1, backgroundColor: BG }, content: { padding: 20, paddingBottom: 110 },
-  hero: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }, eyebrow: { color: CYAN, fontSize: 12, fontWeight: '800', letterSpacing: 2 }, title: { color: '#FFF', fontSize: 30, fontWeight: '900', marginTop: 6 }, subtitle: { color: MUTED, fontSize: 14, marginTop: 8, maxWidth: 270, lineHeight: 20 }, logo: { width: 58, height: 58, borderRadius: 20, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', shadowColor: PURPLE, shadowOpacity: 0.7, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } }, logoText: { color: '#FFF', fontSize: 32, fontWeight: '900' }, card: { backgroundColor: CARD, borderWidth: 1, borderColor: '#202330', borderRadius: 22, padding: 18, marginBottom: 14 }, statusCard: { borderColor: '#283542' }, packCard: { borderColor: '#3B2360', backgroundColor: '#12101C' }, packIcon: { color: CYAN, fontSize: 24 }, packStatus: { color: '#34D399', fontSize: 12, fontWeight: '800', marginTop: 10 }, row: { flexDirection: 'row', alignItems: 'center', gap: 8 }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, cardTitle: { color: '#FFF', fontSize: 16, fontWeight: '800' }, muted: { color: MUTED, fontSize: 13, lineHeight: 19, marginTop: 5 }, dot: { width: 10, height: 10, borderRadius: 8, backgroundColor: '#34D399' }, primaryButton: { backgroundColor: PURPLE, borderRadius: 16, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 18 }, primarySmall: { backgroundColor: PURPLE, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14 }, primaryText: { color: '#FFF', fontSize: 15, fontWeight: '900' }, outlineButton: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 10, borderRadius: 14, borderWidth: 1, borderColor: '#3A3D4A' }, outlineText: { color: '#E7E8EF', fontSize: 13, fontWeight: '800' }, outlineSmall: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14, marginLeft: 10, borderWidth: 1, borderColor: '#3A3D4A' }, sectionTitle: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }, bigNumber: { color: '#FFF', fontSize: 38, fontWeight: '900' }, moduleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, pill: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 99, backgroundColor: '#1B1E29', borderWidth: 1, borderColor: '#2A2D38' }, pillActive: { backgroundColor: '#2C1847', borderColor: PURPLE }, pillText: { color: MUTED, fontSize: 12, fontWeight: '700' }, pillTextActive: { color: '#F2E8FF' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 }, quick: { width: '47%', minHeight: 94, backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: '#202330', padding: 14, justifyContent: 'space-between' }, quickIcon: { color: PURPLE, fontSize: 24 }, quickLabel: { color: '#FFF', fontWeight: '800' }, warning: { borderColor: '#654B12', backgroundColor: '#17140C' }, warningTitle: { color: '#FACC15', fontWeight: '900', fontSize: 13, letterSpacing: 1 }, pageTitle: { color: '#FFF', fontSize: 28, fontWeight: '900', marginBottom: 16 }, input: { backgroundColor: '#191C26', borderRadius: 13, borderWidth: 1, borderColor: '#2B2E3B', color: '#FFF', paddingHorizontal: 14, height: 48, marginTop: 12 }, moduleItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#202330' }, moduleName: { color: '#FFF', fontSize: 15, fontWeight: '800' }, risk: { color: '#FACC15', fontSize: 9, fontWeight: '900', borderWidth: 1, borderColor: '#6B5312', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }, value: { color: CYAN, fontWeight: '900' }, slider: { height: 8, borderRadius: 8, backgroundColor: '#292D39', marginTop: 16, overflow: 'hidden' }, sliderFill: { height: 8, borderRadius: 8 }, hudPreview: { height: 220, backgroundColor: '#06070A', borderRadius: 15, borderWidth: 1, borderColor: '#272A37', marginTop: 16, padding: 12, position: 'relative' }, hudWatermark: { color: PURPLE, fontWeight: '900' }, hudStats: { color: '#FFF', fontSize: 11, marginTop: 7 }, hudArray: { color: '#FFF', fontSize: 12, position: 'absolute', right: 12, top: 12, textAlign: 'right' }, hotbar: { position: 'absolute', bottom: 18, left: 35, right: 35, flexDirection: 'row', gap: 4 }, hotbarItem: { flex: 1, height: 24, backgroundColor: '#262A35', borderWidth: 1, borderColor: '#454A5B' }, colorChoice: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, borderWidth: 2 }, colorLabel: { color: '#FFF', fontSize: 11, fontWeight: '800' }, nav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 78, backgroundColor: '#101219', borderTopWidth: 1, borderTopColor: '#252936', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }, navItem: { alignItems: 'center', justifyContent: 'center', minWidth: 55 }, navIcon: { color: MUTED, fontSize: 22 }, navLabel: { color: MUTED, fontSize: 10, marginTop: 4, fontWeight: '700' },
+  hero: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }, eyebrow: { color: CYAN, fontSize: 12, fontWeight: '800', letterSpacing: 2 }, title: { color: '#FFF', fontSize: 30, fontWeight: '900', marginTop: 6 }, subtitle: { color: MUTED, fontSize: 14, marginTop: 8, maxWidth: 270, lineHeight: 20 }, logo: { width: 58, height: 58, borderRadius: 20, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', shadowColor: PURPLE, shadowOpacity: 0.7, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } }, logoText: { color: '#FFF', fontSize: 32, fontWeight: '900' }, card: { backgroundColor: CARD, borderWidth: 1, borderColor: '#202330', borderRadius: 22, padding: 18, marginBottom: 14 }, statusCard: { borderColor: '#283542' }, packCard: { borderColor: '#3B2360', backgroundColor: '#12101C' }, packIcon: { color: CYAN, fontSize: 24 }, packStatus: { color: '#34D399', fontSize: 12, fontWeight: '800', marginTop: 10 }, overlayCard: { borderColor: '#174A55', backgroundColor: '#0C171C' }, overlayIcon: { color: CYAN, fontSize: 24 }, row: { flexDirection: 'row', alignItems: 'center', gap: 8 }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, cardTitle: { color: '#FFF', fontSize: 16, fontWeight: '800' }, muted: { color: MUTED, fontSize: 13, lineHeight: 19, marginTop: 5 }, dot: { width: 10, height: 10, borderRadius: 8, backgroundColor: '#34D399' }, primaryButton: { backgroundColor: PURPLE, borderRadius: 16, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 18 }, primarySmall: { backgroundColor: PURPLE, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14 }, primaryText: { color: '#FFF', fontSize: 15, fontWeight: '900' }, outlineButton: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 10, borderRadius: 14, borderWidth: 1, borderColor: '#3A3D4A' }, outlineText: { color: '#E7E8EF', fontSize: 13, fontWeight: '800' }, outlineSmall: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14, marginLeft: 10, borderWidth: 1, borderColor: '#3A3D4A' }, sectionTitle: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }, bigNumber: { color: '#FFF', fontSize: 38, fontWeight: '900' }, moduleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, pill: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 99, backgroundColor: '#1B1E29', borderWidth: 1, borderColor: '#2A2D38' }, pillActive: { backgroundColor: '#2C1847', borderColor: PURPLE }, pillText: { color: MUTED, fontSize: 12, fontWeight: '700' }, pillTextActive: { color: '#F2E8FF' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 }, quick: { width: '47%', minHeight: 94, backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: '#202330', padding: 14, justifyContent: 'space-between' }, quickIcon: { color: PURPLE, fontSize: 24 }, quickLabel: { color: '#FFF', fontWeight: '800' }, warning: { borderColor: '#654B12', backgroundColor: '#17140C' }, warningTitle: { color: '#FACC15', fontWeight: '900', fontSize: 13, letterSpacing: 1 }, pageTitle: { color: '#FFF', fontSize: 28, fontWeight: '900', marginBottom: 16 }, input: { backgroundColor: '#191C26', borderRadius: 13, borderWidth: 1, borderColor: '#2B2E3B', color: '#FFF', paddingHorizontal: 14, height: 48, marginTop: 12 }, moduleItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#202330' }, moduleName: { color: '#FFF', fontSize: 15, fontWeight: '800' }, risk: { color: '#FACC15', fontSize: 9, fontWeight: '900', borderWidth: 1, borderColor: '#6B5312', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }, value: { color: CYAN, fontWeight: '900' }, slider: { height: 8, borderRadius: 8, backgroundColor: '#292D39', marginTop: 16, overflow: 'hidden' }, sliderFill: { height: 8, borderRadius: 8 }, hudPreview: { height: 220, backgroundColor: '#06070A', borderRadius: 15, borderWidth: 1, borderColor: '#272A37', marginTop: 16, padding: 12, position: 'relative' }, hudWatermark: { color: PURPLE, fontWeight: '900' }, hudStats: { color: '#FFF', fontSize: 11, marginTop: 7 }, hudArray: { color: '#FFF', fontSize: 12, position: 'absolute', right: 12, top: 12, textAlign: 'right' }, hotbar: { position: 'absolute', bottom: 18, left: 35, right: 35, flexDirection: 'row', gap: 4 }, hotbarItem: { flex: 1, height: 24, backgroundColor: '#262A35', borderWidth: 1, borderColor: '#454A5B' }, colorChoice: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, borderWidth: 2 }, colorLabel: { color: '#FFF', fontSize: 11, fontWeight: '800' }, nav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 78, backgroundColor: '#101219', borderTopWidth: 1, borderTopColor: '#252936', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }, navItem: { alignItems: 'center', justifyContent: 'center', minWidth: 55 }, navIcon: { color: MUTED, fontSize: 22 }, navLabel: { color: MUTED, fontSize: 10, marginTop: 4, fontWeight: '700' },
 });
