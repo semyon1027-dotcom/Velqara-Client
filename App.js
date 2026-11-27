@@ -254,6 +254,16 @@ export default function App() {
     <ScrollView contentContainerStyle={styles.content}><Text style={styles.pageTitle}>Профили</Text><Card><Text style={styles.cardTitle}>Активный профиль</Text><TextInput value={profile} onChangeText={setProfile} style={styles.input} placeholder="Название профиля" placeholderTextColor={MUTED} /><View style={styles.row}><TouchableOpacity style={styles.primarySmall} onPress={() => Alert.alert('Сохранено', `Профиль «${profile}» сохранён локально.`)}><Text style={styles.primaryText}>Сохранить</Text></TouchableOpacity><TouchableOpacity style={styles.outlineSmall} onPress={() => setEnabled({ Watermark: true, 'Array list': true })}><Text style={styles.outlineText}>Сбросить</Text></TouchableOpacity></View></Card><Card><Text style={styles.cardTitle}>Локальное хранение</Text><Text style={styles.muted}>Настройки остаются на устройстве. Облачный вход не требуется.</Text></Card></ScrollView>
   );
 
+  const renderPacks = () => (
+    <ScrollView contentContainerStyle={styles.content}>
+      <Text style={styles.pageTitle}>Bedrock Packs</Text>
+      <Card style={styles.packCard}><Text style={styles.cardTitle}>Velqara Behavior Pack</Text><Text style={styles.muted}>Скриптовые функции локального мира: Fulbright, particles, sounds, TNT HUD, jump circle, death position и waypoints.</Text><View style={styles.rowBetween}><Pill active>Готов к экспорту</Pill><Text style={styles.value}>1.26.60+</Text></View></Card>
+      <Card style={styles.packCard}><Text style={styles.cardTitle}>Velqara Resource Pack</Text><Text style={styles.muted}>Fog и визуальные ресурсы. Пакет импортируется вместе с behavior pack.</Text><View style={styles.rowBetween}><Pill active>Готов к экспорту</Pill><Text style={styles.value}>Resource</Text></View></Card>
+      <TouchableOpacity style={styles.primaryButton} onPress={exportBedrockPack}><Text style={styles.primaryText}>Установить пакеты в Minecraft</Text></TouchableOpacity>
+      <Card><Text style={styles.cardTitle}>После импорта</Text><Text style={styles.muted}>Выбери Minecraft в системном окне, затем открой настройки мира и активируй Velqara Behavior и Resource packs.</Text></Card>
+    </ScrollView>
+  );
+
   const renderSettings = () => (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>Настройки</Text>
@@ -265,7 +275,7 @@ export default function App() {
     </ScrollView>
   );
 
-  return <SafeAreaView style={styles.safe}><StatusBar barStyle="light-content" backgroundColor={BG} /><View style={styles.app}>{tab === 'home' && renderHome()}{tab === 'modules' && renderModules()}{tab === 'hud' && renderHud()}{tab === 'profiles' && renderProfiles()}{tab === 'settings' && renderSettings()}<View style={styles.nav}>{[['home', 'Главная', '⌂'], ['modules', 'Модули', '✦'], ['hud', 'HUD', '◈'], ['profiles', 'Профили', '▱'], ['settings', 'Настройки', '⚙']].map(([id, label, icon]) => <TouchableOpacity key={id} onPress={() => setTab(id)} style={styles.navItem}><Text style={[styles.navIcon, tab === id && { color: accent }]}>{icon}</Text><Text style={[styles.navLabel, tab === id && { color: accent }]}>{label}</Text></TouchableOpacity>)}</View></View></SafeAreaView>;
+  return <SafeAreaView style={styles.safe}><StatusBar barStyle="light-content" backgroundColor={BG} /><View style={styles.app}>{tab === 'home' && renderHome()}{tab === 'modules' && renderModules()}{tab === 'hud' && renderHud()}{tab === 'profiles' && renderProfiles()}{tab === 'packs' && renderPacks()}{tab === 'settings' && renderSettings()}<View style={styles.nav}>{[['home', 'Главная', '⌂'], ['modules', 'Модули', '✦'], ['hud', 'HUD', '◈'], ['profiles', 'Профили', '▱'], ['packs', 'Packs', '◆'], ['settings', 'Настройки', '⚙']].map(([id, label, icon]) => <TouchableOpacity key={id} onPress={() => setTab(id)} style={styles.navItem}><Text style={[styles.navIcon, tab === id && { color: accent }]}>{icon}</Text><Text style={[styles.navLabel, tab === id && { color: accent }]}>{label}</Text></TouchableOpacity>)}</View></View></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
