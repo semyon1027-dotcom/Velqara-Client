@@ -102,6 +102,11 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.pm.ServiceInfo;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -122,15 +127,28 @@ public class VelqaraOverlayService extends Service {
   @Override
   public void onCreate() {
     super.onCreate();
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+      String channelId = "velqara_overlay";
+      NotificationChannel channel = new NotificationChannel(channelId, "Velqara overlay", NotificationManager.IMPORTANCE_LOW);
+      channel.setDescription("Keeps Velqara HUD visible over Minecraft");
+      ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(channel);
+      Notification notification = new Notification.Builder(this, channelId).setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Velqara HUD").setContentText("Оверлей работает поверх Minecraft").setOngoing(true).build();
+      if (android.os.Build.VERSION.SDK_INT >= 34) startForeground(1001, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE); else startForeground(1001, notification);
+    }
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) return;
     windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
     badge = new TextView(this);
-    badge.setText("VELQARA  •  FPS  —  |  CPS  —");
+    badge.setText("VELQARA   •   FPS —   CPS —   BPS —");
     badge.setTextColor(Color.WHITE);
     badge.setTextSize(12);
     badge.setPadding(18, 12, 18, 12);
-    badge.setBackgroundColor(Color.argb(220, 25, 15, 42));
-    badge.setOnClickListener(v -> badge.setText(badge.getText().toString().contains("HUD") ? "VELQARA  •  FPS  —  |  CPS  —" : "VELQARA  HUD  •  Watermark  •  Array list"));
+    badge.setTypeface(null, 1);
+    GradientDrawable hudBg = new GradientDrawable();
+    hudBg.setColor(Color.argb(225, 17, 13, 29));
+    hudBg.setCornerRadius(64);
+    hudBg.setStroke(1, Color.argb(230, 168, 85, 247));
+    badge.setBackground(hudBg);
+    badge.setOnClickListener(v -> badge.setText(badge.getText().toString().contains("HUD") ? "VELQARA   •   FPS —   CPS —   BPS —" : "VELQARA HUD   •   Watermark   •   Array list"));
     badge.setOnTouchListener(new View.OnTouchListener() {
       @Override public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -162,6 +180,10 @@ module.exports = function withVelqaraOverlay(config) {
   config = withAndroidManifest(config, (config) => {
     const manifest = config.modResults.manifest;
     manifest['uses-permission'] = manifest['uses-permission'] || [];
+    const requiredPermissions = ['android.permission.FOREGROUND_SERVICE', 'android.permission.FOREGROUND_SERVICE_SPECIAL_USE', 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'];
+    for (const permission of requiredPermissions) {
+      if (!manifest['uses-permission'].some((p) => p.$?.['android:name'] === permission)) manifest['uses-permission'].push({ $: { 'android:name': permission } });
+    }
     if (!manifest['uses-permission'].some((p) => p.$?.['android:name'] === 'android.permission.SYSTEM_ALERT_WINDOW')) {
       manifest['uses-permission'].push({ $: { 'android:name': 'android.permission.SYSTEM_ALERT_WINDOW' } });
     }
@@ -173,10 +195,11 @@ module.exports = function withVelqaraOverlay(config) {
       }
     }
     const application = manifest.application?.[0];
+    if (application) { application.$ = application.$ || {}; application.$['android:icon'] = '@drawable/velqara_icon'; application.$['android:roundIcon'] = '@drawable/velqara_icon'; }
     if (application) {
       application.service = application.service || [];
       if (!application.service.some((s) => s.$?.['android:name'] === '.VelqaraOverlayService')) {
-        application.service.push({ $: { 'android:name': '.VelqaraOverlayService', 'android:exported': 'false' } });
+        application.service.push({ $: { 'android:name': '.VelqaraOverlayService', 'android:exported': 'false', 'android:foregroundServiceType': 'specialUse' } });
       }
     }
     return config;
@@ -186,6 +209,9 @@ module.exports = function withVelqaraOverlay(config) {
     const root = config.modRequest.platformProjectRoot;
     const javaDir = path.join(root, 'app', 'src', 'main', 'java', ...PACKAGE.split('.'));
     fs.mkdirSync(javaDir, { recursive: true });
+    const drawableDir = path.join(root, 'app', 'src', 'main', 'res', 'drawable');
+    fs.mkdirSync(drawableDir, { recursive: true });
+    fs.writeFileSync(path.join(drawableDir, 'velqara_icon.xml'), "<?xml version=\"1.0\" encoding=\"utf-8\"?>\\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"108dp\" android:height=\"108dp\" android:viewportWidth=\"108\" android:viewportHeight=\"108\">\\n  <path android:fillColor=\"#A855F7\" android:pathData=\"M16,0 L92,0 C101,0 108,7 108,16 L108,92 C108,101 101,108 92,108 L16,108 C7,108 0,101 0,92 L0,16 C0,7 7,0 16,0 Z\"/>\\n  <path android:fillColor=\"#FFFFFF\" android:pathData=\"M25,24 L41,24 L54,64 L67,24 L83,24 L62,84 L46,84 Z\"/>\\n</vector>");
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayPackage.java'), packageJava);
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayModule.java'), moduleJava);
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayService.java'), serviceJava);
