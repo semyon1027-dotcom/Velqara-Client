@@ -35,10 +35,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import com.facebook.react.bridge.ActivityEventListener;
+import android.content.pm.PackageManager;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.Promise;
 
 public class VelqaraOverlayModule extends ReactContextBaseJavaModule {
   private final ReactApplicationContext context;
@@ -73,6 +74,24 @@ public class VelqaraOverlayModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void stopOverlay() {
     context.stopService(new Intent(context, VelqaraOverlayService.class));
+  }
+
+  @ReactMethod
+  public void launchMinecraft(Promise promise) {
+    String[] packages = { "com.mojang.minecraftpe", "com.mojang.minecraftpe.preview", "com.mojang.minecraftpe.beta" };
+    PackageManager manager = context.getPackageManager();
+    for (String packageName : packages) {
+      try {
+        Intent launch = manager.getLaunchIntentForPackage(packageName);
+        if (launch != null) {
+          launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+          context.startActivity(launch);
+          promise.resolve(packageName);
+          return;
+        }
+      } catch (Exception ignored) {}
+    }
+    promise.reject("MINECRAFT_NOT_FOUND", "Minecraft package was not found");
   }
 }
 `;
@@ -145,6 +164,13 @@ module.exports = function withVelqaraOverlay(config) {
     manifest['uses-permission'] = manifest['uses-permission'] || [];
     if (!manifest['uses-permission'].some((p) => p.$?.['android:name'] === 'android.permission.SYSTEM_ALERT_WINDOW')) {
       manifest['uses-permission'].push({ $: { 'android:name': 'android.permission.SYSTEM_ALERT_WINDOW' } });
+    }
+    manifest.queries = manifest.queries || [];
+    const minecraftPackages = ['com.mojang.minecraftpe', 'com.mojang.minecraftpe.preview', 'com.mojang.minecraftpe.beta'];
+    for (const packageName of minecraftPackages) {
+      if (!manifest.queries.some((query) => (query.package || []).some((entry) => entry.$?.['android:name'] === packageName))) {
+        manifest.queries.push({ package: [{ $: { 'android:name': packageName } }] });
+      }
     }
     const application = manifest.application?.[0];
     if (application) {
