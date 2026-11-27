@@ -171,7 +171,7 @@ public class VelqaraOverlayService extends Service {
   }
 
   @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
-  @Override public void onDestroy() { if (windowManager != null && badge != null) windowManager.removeView(badge); super.onDestroy(); }
+  @Override public void onDestroy() { if (windowManager != null && badge != null) windowManager.removeView(badge); stopForeground(true); super.onDestroy(); }
   @Override public IBinder onBind(Intent intent) { return null; }
 }
 `;
