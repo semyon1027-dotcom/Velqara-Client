@@ -1,2 +1,15 @@
-apply plugin: 'com.android.library'
-apply plugin: 'expo-module-gradle-plugin'
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.velqara.minecraft'
+version = '1.0.0'
+
+android {
+  namespace 'com.velqara.minecraft'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
