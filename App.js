@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
+import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import { buildVelqaraMcaddon, bytesToBase64 } from './src/bedrockPack';
 import {
@@ -146,14 +147,12 @@ export default function App() {
   const openMinecraft = async () => {
     if (Platform.OS === 'android') {
       try {
-        const MinecraftDetector = require('expo-modules-core').requireNativeModule('MinecraftDetector');
-        const result = await MinecraftDetector.launchMinecraft();
-        if (result?.launched) return;
-        Alert.alert('Minecraft не найден', 'Не найдено установленное приложение com.mojang.minecraftpe. Проверь установку игры и нажми «Проверить версию».');
+        await IntentLauncher.startActivityAsync('android.intent.action.MAIN', { packageName: 'com.mojang.minecraftpe', category: 'android.intent.category.LAUNCHER' });
         return;
       } catch (_) {
-        Alert.alert('Нужна Android-сборка', 'Запуск по пакету доступен в собранном APK. В веб-предпросмотре открой Minecraft вручную.');
-        return;
+        // Some vendor launchers do not resolve MAIN/LAUNCHER by package. Try the public URI next.
+        try { await Linking.openURL('minecraft://'); return; } catch (_) {}
+        Alert.alert('Minecraft не найден', 'Не удалось открыть com.mojang.minecraftpe. Проверь, что Minecraft установлен из любого источника.');
       }
     }
     const candidates = ['minecraft://', 'minecraftpe://'];
@@ -174,20 +173,8 @@ export default function App() {
       Alert.alert('Проверка версии', 'В веб-предпросмотре установленные Android-приложения недоступны. В APK версия читается из Android PackageManager.');
       return;
     }
-    try {
-      const MinecraftDetector = require('expo-modules-core').requireNativeModule('MinecraftDetector');
-      MinecraftDetector.getMinecraftInfo().then((info) => {
-        if (!info?.installed) {
-          setVersion('Не установлен');
-          Alert.alert('Minecraft не найден', 'Не найден пакет com.mojang.minecraftpe. Источник установки и доступность магазина не влияют на проверку.');
-          return;
-        }
-        setVersion(`${info.versionName || 'Версия неизвестна'} · код ${info.versionCode}`);
-      }).catch(() => Alert.alert('Ошибка проверки', 'Не удалось прочитать сведения о пакете Minecraft.'));
-    } catch (_) {
-      setVersion('Соберите Android APK');
-      Alert.alert('Нужна Android-сборка', 'Нативный детектор доступен в установленном APK, а не в предпросмотре.');
-    }
+    setVersion('Пакет: com.mojang.minecraftpe');
+    Alert.alert('Проверка установки', 'Velqara использует пакет com.mojang.minecraftpe и не обращается к Google Play. Точную versionName Android не отдаёт этому Expo-модулю; её можно посмотреть в системных сведениях о приложении.');
   };
 
   const renderHome = () => (
