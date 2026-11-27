@@ -211,7 +211,7 @@ module.exports = function withVelqaraOverlay(config) {
     fs.mkdirSync(javaDir, { recursive: true });
     const drawableDir = path.join(root, 'app', 'src', 'main', 'res', 'drawable');
     fs.mkdirSync(drawableDir, { recursive: true });
-    fs.writeFileSync(path.join(drawableDir, 'velqara_icon.xml'), "<?xml version=\"1.0\" encoding=\"utf-8\"?>\\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"108dp\" android:height=\"108dp\" android:viewportWidth=\"108\" android:viewportHeight=\"108\">\\n  <path android:fillColor=\"#A855F7\" android:pathData=\"M16,0 L92,0 C101,0 108,7 108,16 L108,92 C108,101 101,108 92,108 L16,108 C7,108 0,101 0,92 L0,16 C0,7 7,0 16,0 Z\"/>\\n  <path android:fillColor=\"#FFFFFF\" android:pathData=\"M25,24 L41,24 L54,64 L67,24 L83,24 L62,84 L46,84 Z\"/>\\n</vector>");
+    fs.writeFileSync(path.join(drawableDir, 'velqara_icon.xml'), ['<?xml version="1.0" encoding="utf-8"?>', '<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">', '  <path android:fillColor="#A855F7" android:pathData="M16,0 L92,0 C101,0 108,7 108,16 L108,92 C108,101 101,108 92,108 L16,108 C7,108 0,101 0,92 L0,16 C0,7 7,0 16,0 Z"/>', '  <path android:fillColor="#FFFFFF" android:pathData="M25,24 L41,24 L54,64 L67,24 L83,24 L62,84 L46,84 Z"/>', '</vector>'].join('\n'))
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayPackage.java'), packageJava);
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayModule.java'), moduleJava);
     fs.writeFileSync(path.join(javaDir, 'VelqaraOverlayService.java'), serviceJava);
