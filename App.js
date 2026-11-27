@@ -169,6 +169,10 @@ export default function App() {
   const openMinecraft = async () => {
     if (Platform.OS === 'android') {
       try {
+        if (Overlay?.launchMinecraft) {
+          await Overlay.launchMinecraft();
+          return;
+        }
         await IntentLauncher.startActivityAsync('android.intent.action.MAIN', { packageName: 'com.mojang.minecraftpe', category: 'android.intent.category.LAUNCHER' });
         return;
       } catch (_) {
