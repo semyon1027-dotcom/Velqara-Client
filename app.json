@@ -9,7 +9,6 @@
       "package": "com.velqara.client",
       "versionCode": 1
     },
-    "plugins": ["./plugins/withMinecraftPackage"],
     "extra": {
       "minecraftPackage": "com.mojang.minecraftpe",
       "minimumBedrockVersion": "1.26.60"
