@@ -2,12 +2,12 @@
   "expo": {
     "name": "Velqara Client",
     "slug": "velqara-client",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.velqara.client",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/velqara_icon.png",
         "backgroundColor": "#08090D"
