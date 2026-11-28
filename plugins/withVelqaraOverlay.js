@@ -131,6 +131,7 @@ public class VelqaraOverlayService extends Service {
   private float downY;
   private int startX;
   private int startY;
+  private boolean dragging;
 
   private GradientDrawable pill(int[] colors, float radius) {
     GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
@@ -165,7 +166,7 @@ public class VelqaraOverlayService extends Service {
     Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
     PendingIntent pending = open == null ? null : PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-    builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Velqara HUD").setContentText("Меню работает поверх Minecraft").setOngoing(true).setCategory(Notification.CATEGORY_SERVICE);
+    builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Velqara HUD").setContentText("Нажми круг V, чтобы открыть меню").setOngoing(true).setCategory(Notification.CATEGORY_SERVICE);
     if (pending != null) builder.setContentIntent(pending);
     startForeground(2401, builder.build());
   }
@@ -176,23 +177,27 @@ public class VelqaraOverlayService extends Service {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) { stopSelf(); return; }
     windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
     root = new FrameLayout(this);
+
     badge = new TextView(this);
-    badge.setText("VELQARA  •  FPS —  •  CPS —  •  BPS —");
+    badge.setText("V");
     badge.setTextColor(Color.WHITE);
-    badge.setTextSize(12);
-    badge.setTypeface(null, Typeface.BOLD);
+    badge.setTextSize(24);
+    badge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
     badge.setGravity(Gravity.CENTER);
-    badge.setPadding(22, 12, 22, 12);
-    badge.setBackground(pill(new int[] { Color.rgb(112, 35, 190), Color.rgb(20, 190, 220) }, 80));
-    FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(-2, 48, Gravity.TOP | Gravity.END);
+    badge.setBackground(pill(new int[] { Color.rgb(142, 54, 246), Color.rgb(29, 210, 236) }, 90));
+    FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(60, 60, Gravity.TOP | Gravity.END);
+    badgeLp.setMargins(0, 0, 8, 0);
     root.addView(badge, badgeLp);
+
     menu = new LinearLayout(this);
     menu.setOrientation(LinearLayout.VERTICAL);
-    menu.setPadding(8, 60, 8, 8);
+    menu.setPadding(10, 10, 10, 10);
     menu.setVisibility(View.GONE);
-    menu.setBackground(pill(new int[] { Color.rgb(12, 10, 30), Color.rgb(10, 37, 53) }, 28));
+    menu.setBackground(pill(new int[] { Color.rgb(10, 8, 29), Color.rgb(8, 36, 54) }, 28));
     FrameLayout.LayoutParams menuLp = new FrameLayout.LayoutParams(330, 500, Gravity.TOP | Gravity.END);
+    menuLp.setMargins(0, 68, 0, 0);
     root.addView(menu, menuLp);
+
     menu.addView(row("VELQARA CLIENT  •  MENU"));
     menu.addView(row("VISUALS  •  Fulbright"));
     menu.addView(row("Swing animation"));
@@ -205,19 +210,40 @@ public class VelqaraOverlayService extends Service {
     TextView close = row("Закрыть меню");
     close.setOnClickListener(v -> menu.setVisibility(View.GONE));
     menu.addView(close);
+
     badge.setOnClickListener(v -> menu.setVisibility(menu.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
     badge.setOnTouchListener(new View.OnTouchListener() {
       @Override public boolean onTouch(View v, MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) { downX = event.getRawX(); downY = event.getRawY(); startX = params.x; startY = params.y; return true; }
-        if (event.getAction() == MotionEvent.ACTION_MOVE) { params.x = startX - (int)(event.getRawX() - downX); params.y = startY + (int)(event.getRawY() - downY); if (windowManager != null) windowManager.updateViewLayout(root, params); return true; }
-        if (event.getAction() == MotionEvent.ACTION_UP) { v.performClick(); return true; }
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+          downX = event.getRawX();
+          downY = event.getRawY();
+          startX = params == null ? 16 : params.x;
+          startY = params == null ? 90 : params.y;
+          dragging = false;
+          return true;
+        }
+        if (event.getAction() == MotionEvent.ACTION_MOVE) {
+          if (Math.abs(event.getRawX() - downX) > 8 || Math.abs(event.getRawY() - downY) > 8) dragging = true;
+          if (dragging) {
+            params.x = startX - (int)(event.getRawX() - downX);
+            params.y = startY + (int)(event.getRawY() - downY);
+            if (windowManager != null) windowManager.updateViewLayout(root, params);
+          }
+          return true;
+        }
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+          if (!dragging) v.performClick();
+          return true;
+        }
         return false;
       }
     });
+
     int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
-    params = new WindowManager.LayoutParams(330, 500, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
+    params = new WindowManager.LayoutParams(360, 570, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
     params.gravity = Gravity.TOP | Gravity.END;
-    params.x = 16; params.y = 90;
+    params.x = 16;
+    params.y = 90;
     try { windowManager.addView(root, params); } catch (Exception error) { stopSelf(); }
   }
 
