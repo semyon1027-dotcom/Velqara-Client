@@ -107,6 +107,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.IBinder;
@@ -115,17 +116,44 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class VelqaraOverlayService extends Service {
   private static final String CHANNEL_ID = "velqara_overlay";
   private WindowManager windowManager;
+  private FrameLayout root;
   private TextView badge;
+  private LinearLayout menu;
   private WindowManager.LayoutParams params;
   private float downX;
   private float downY;
   private int startX;
   private int startY;
+
+  private GradientDrawable pill(int[] colors, float radius) {
+    GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
+    d.setCornerRadius(radius);
+    d.setStroke(2, Color.argb(190, 255, 255, 255));
+    return d;
+  }
+
+  private TextView row(String text) {
+    TextView item = new TextView(this);
+    item.setText(text);
+    item.setTextColor(Color.WHITE);
+    item.setTextSize(12);
+    item.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+    item.setGravity(Gravity.CENTER_VERTICAL);
+    item.setPadding(18, 12, 18, 12);
+    item.setBackground(pill(new int[] { Color.rgb(35, 24, 64), Color.rgb(11, 93, 115) }, 36));
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(230, 44);
+    lp.setMargins(0, 0, 0, 6);
+    item.setLayoutParams(lp);
+    item.setOnClickListener(v -> item.setText(item.getText().toString().endsWith("ON") ? text + "  OFF" : text + "  ON"));
+    return item;
+  }
 
   private void startNotification() {
     NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -137,7 +165,7 @@ public class VelqaraOverlayService extends Service {
     Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
     PendingIntent pending = open == null ? null : PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-    builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Velqara HUD").setContentText("Оверлей работает поверх Minecraft").setOngoing(true).setCategory(Notification.CATEGORY_SERVICE);
+    builder.setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Velqara HUD").setContentText("Меню работает поверх Minecraft").setOngoing(true).setCategory(Notification.CATEGORY_SERVICE);
     if (pending != null) builder.setContentIntent(pending);
     startForeground(2401, builder.build());
   }
@@ -147,37 +175,53 @@ public class VelqaraOverlayService extends Service {
     startNotification();
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) { stopSelf(); return; }
     windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+    root = new FrameLayout(this);
     badge = new TextView(this);
     badge.setText("VELQARA  •  FPS —  •  CPS —  •  BPS —");
     badge.setTextColor(Color.WHITE);
     badge.setTextSize(12);
-    badge.setTypeface(null, android.graphics.Typeface.BOLD);
-    badge.setPadding(24, 14, 24, 14);
-    GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[] { Color.rgb(112, 35, 190), Color.rgb(25, 196, 222) });
-    background.setCornerRadius(80f);
-    background.setStroke(2, Color.argb(190, 255, 255, 255));
-    badge.setBackground(background);
-    badge.setOnClickListener(v -> badge.setText(badge.getText().toString().contains("HUD") ? "VELQARA  •  FPS —  •  CPS —  •  BPS —" : "VELQARA  HUD  •  Watermark  •  Array list"));
+    badge.setTypeface(null, Typeface.BOLD);
+    badge.setGravity(Gravity.CENTER);
+    badge.setPadding(22, 12, 22, 12);
+    badge.setBackground(pill(new int[] { Color.rgb(112, 35, 190), Color.rgb(20, 190, 220) }, 80));
+    FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(-2, 48, Gravity.TOP | Gravity.END);
+    root.addView(badge, badgeLp);
+    menu = new LinearLayout(this);
+    menu.setOrientation(LinearLayout.VERTICAL);
+    menu.setPadding(8, 60, 8, 8);
+    menu.setVisibility(View.GONE);
+    menu.setBackground(pill(new int[] { Color.rgb(12, 10, 30), Color.rgb(10, 37, 53) }, 28));
+    FrameLayout.LayoutParams menuLp = new FrameLayout.LayoutParams(246, 280, Gravity.TOP | Gravity.END);
+    root.addView(menu, menuLp);
+    menu.addView(row("Fulbright"));
+    menu.addView(row("Swing animation"));
+    menu.addView(row("Hit particles"));
+    menu.addView(row("Custom FOV"));
+    menu.addView(row("Watermark"));
+    TextView close = row("Закрыть меню");
+    close.setOnClickListener(v -> menu.setVisibility(View.GONE));
+    menu.addView(close);
+    badge.setOnClickListener(v -> menu.setVisibility(menu.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
     badge.setOnTouchListener(new View.OnTouchListener() {
       @Override public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) { downX = event.getRawX(); downY = event.getRawY(); startX = params.x; startY = params.y; return true; }
-        if (event.getAction() == MotionEvent.ACTION_MOVE) { params.x = startX - (int)(event.getRawX() - downX); params.y = startY + (int)(event.getRawY() - downY); if (windowManager != null) windowManager.updateViewLayout(badge, params); return true; }
+        if (event.getAction() == MotionEvent.ACTION_MOVE) { params.x = startX - (int)(event.getRawX() - downX); params.y = startY + (int)(event.getRawY() - downY); if (windowManager != null) windowManager.updateViewLayout(root, params); return true; }
         if (event.getAction() == MotionEvent.ACTION_UP) { v.performClick(); return true; }
         return false;
       }
     });
     int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
-    params = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
+    params = new WindowManager.LayoutParams(246, 280, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
     params.gravity = Gravity.TOP | Gravity.END;
     params.x = 16; params.y = 90;
-    try { windowManager.addView(badge, params); } catch (Exception error) { stopSelf(); }
+    try { windowManager.addView(root, params); } catch (Exception error) { stopSelf(); }
   }
 
   @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
-  @Override public void onDestroy() { if (windowManager != null && badge != null) { try { windowManager.removeView(badge); } catch (Exception ignored) {} } super.onDestroy(); }
+  @Override public void onDestroy() { if (windowManager != null && root != null) { try { windowManager.removeView(root); } catch (Exception ignored) {} } super.onDestroy(); }
   @Override public IBinder onBind(Intent intent) { return null; }
 }
-`;
+`
 
 module.exports = function withVelqaraOverlay(config) {
   config = withAndroidManifest(config, (config) => {
