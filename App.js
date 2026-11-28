@@ -98,30 +98,80 @@ function Card({ children, style }) {
 
 function RangeSlider({ value, onChange, min = 0, max = 100, step = 1, accent = PURPLE }) {
   const [width, setWidth] = useState(1);
-  const update = (x) => {
-    const ratio = Math.max(0, Math.min(1, x / Math.max(width, 1)));
-    const raw = min + ratio * (max - min);
-    const stepped = Math.round(raw / step) * step;
-    onChange(Math.max(min, Math.min(max, Number(stepped.toFixed(2)))));
-  };
-  const responder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (event) => update(event.nativeEvent.locationX),
-    onPanResponderMove: (event) => update(event.nativeEvent.locationX),
-  }), [width, min, max, step, onChange]);
+  const widthRef = useRef(1);
+  const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    valueRef.current = value;
+  }, [onChange, value]);
+
+  const responder = useMemo(() => {
+    const updateFromX = (x) => {
+      const trackWidth = Math.max(widthRef.current, 1);
+      const ratio = Math.max(0, Math.min(1, x / trackWidth));
+      const raw = min + ratio * (max - min);
+      const stepped = Math.round(raw / step) * step;
+      onChangeRef.current(Math.max(min, Math.min(max, Number(stepped.toFixed(2)))));
+    };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (event) => updateFromX(event.nativeEvent.locationX),
+      onPanResponderMove: (event) => updateFromX(event.nativeEvent.locationX),
+      onPanResponderTerminationRequest: () => false,
+    });
+  }, [min, max, step]);
+
   const progress = Math.max(0, Math.min(1, (value - min) / (max - min)));
   return (
     <View
       style={styles.sliderTouchArea}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      onLayout={(event) => {
+        const nextWidth = event.nativeEvent.layout.width;
+        widthRef.current = nextWidth;
+        setWidth(nextWidth);
+      }}
       {...responder.panHandlers}
     >
       <View style={styles.sliderTrack}>
-        <View style={[styles.sliderFill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
-        <View style={[styles.sliderThumb, { left: `${progress * 100}%`, backgroundColor: accent }]} />
+        <View style={[styles.sliderFill, { width: (progress * 100) + '%', backgroundColor: accent }]} />
+        <View style={[styles.sliderThumb, { left: (progress * 100) + '%', backgroundColor: accent }]} />
       </View>
     </View>
+  );
+}
+function AnimatedVLogo() {
+  const left = useRef(new Animated.Value(0)).current;
+  const right = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0.82)).current;
+
+  useEffect(() => {
+    const draw = Animated.loop(Animated.sequence([
+      Animated.timing(left, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(right, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.delay(700),
+      Animated.parallel([
+        Animated.timing(left, { toValue: 0, duration: 260, useNativeDriver: true }),
+        Animated.timing(right, { toValue: 0, duration: 260, useNativeDriver: true }),
+      ]),
+    ]));
+    const breathe = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.82, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    draw.start();
+    breathe.start();
+    return () => { draw.stop(); breathe.stop(); };
+  }, [left, right, pulse]);
+
+  return (
+    <Animated.View style={[styles.vStage, { transform: [{ scale: pulse }] }]}>
+      <Animated.View style={[styles.vStroke, styles.vStrokeLeft, { transform: [{ scaleY: left }, { rotate: '-24deg' }] }]} />
+      <Animated.View style={[styles.vStroke, styles.vStrokeRight, { transform: [{ scaleY: right }, { rotate: '24deg' }] }]} />
+      <View style={styles.vGlow} />
+    </Animated.View>
   );
 }
 
@@ -414,11 +464,11 @@ export default function App() {
     </ScrollView>
   );
 
-  if (booting) return <SafeAreaView style={styles.splash}><StatusBar barStyle="light-content" backgroundColor={BG} /><Animated.View style={[styles.splashLogoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}><Image source={require('./assets/velqara_icon.png')} style={styles.logoLargeImage} /><Text style={styles.splashTitle}>VELQARA CLIENT</Text><Text style={styles.splashSubtitle}>BEDROCK CLIENT</Text><ActivityIndicator color={CYAN} size="small" style={styles.splashSpinner} /></Animated.View></SafeAreaView>;
+  if (booting) return <SafeAreaView style={styles.splash}><StatusBar barStyle="light-content" backgroundColor={BG} /><Animated.View style={[styles.splashLogoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}><AnimatedVLogo /><Text style={styles.splashTitle}>VELQARA CLIENT</Text><Text style={styles.splashSubtitle}>BEDROCK CLIENT</Text><ActivityIndicator color={CYAN} size="small" style={styles.splashSpinner} /></Animated.View></SafeAreaView>;
   return <SafeAreaView style={styles.safe}><StatusBar barStyle="light-content" backgroundColor={BG} /><View style={styles.app}><NeonBackground /><Animated.View style={[styles.screen, { opacity: screenOpacity, transform: [{ translateY: screenTranslate }] }]}>{tab === 'home' && renderHome()}{tab === 'modules' && renderModules()}{tab === 'hud' && renderHud()}{tab === 'profiles' && renderProfiles()}{tab === 'packs' && renderPacks()}{tab === 'settings' && renderSettings()}</Animated.View><View style={styles.nav}>{[['home', 'Главная', '⌂'], ['modules', 'Модули', '✦'], ['hud', 'HUD', '◈'], ['profiles', 'Профили', '▱'], ['packs', 'Packs', '◆'], ['settings', 'Настройки', '⚙']].map(([id, label, icon]) => <TouchableOpacity key={id} onPress={() => goTo(id)} style={styles.navItem}><Text style={[styles.navIcon, tab === id && { color: accent }]}>{icon}</Text><Text style={[styles.navLabel, tab === id && { color: accent }]}>{label}</Text></TouchableOpacity>)}</View></View></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG }, app: { flex: 1, backgroundColor: '#050711' }, dashboardCard: { backgroundColor: '#0A1024', borderColor: '#3C2B78', borderRadius: 28, padding: 14, shadowColor: PURPLE, shadowOpacity: 0.28, shadowRadius: 18, elevation: 8 }, dashboardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }, dashboardEyebrow: { color: CYAN, fontSize: 9, fontWeight: '900', letterSpacing: 2 }, dashboardTitle: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 1, marginTop: 3 }, livePill: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#6C44C8', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#17113A' }, liveDot: { width: 7, height: 7, borderRadius: 7, backgroundColor: '#34D399', marginRight: 6, shadowColor: '#34D399', shadowOpacity: 0.9, shadowRadius: 6 }, liveText: { color: '#D8C7FF', fontSize: 9, fontWeight: '900', letterSpacing: 1 }, dashboardMetrics: { flexDirection: 'row', justifyContent: 'space-between' }, metricCard: { flex: 1, alignItems: 'center', paddingVertical: 4 }, metricCaption: { color: '#B8B9D6', fontSize: 10, fontWeight: '800', marginBottom: 7 }, metricWrap: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' }, metricRingOuter: { width: 74, height: 74, borderRadius: 40, borderWidth: 3, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.75, shadowRadius: 14, elevation: 7 }, metricRingInner: { width: 58, height: 58, borderRadius: 32, borderWidth: 1, backgroundColor: '#090D1D', alignItems: 'center', justifyContent: 'center' }, metricValue: { color: '#FFF', fontSize: 19, fontWeight: '900' }, metricLabel: { color: '#A7B0C8', fontSize: 8, fontWeight: '800', marginTop: 1 }, metricHint: { color: '#7F86A8', fontSize: 9, marginTop: 6 }, neonBackground: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }, neonOrb: { position: 'absolute', width: 280, height: 280, borderRadius: 160, top: -90, left: -95, backgroundColor: PURPLE, opacity: 0.19, shadowColor: PURPLE, shadowOpacity: 0.9, shadowRadius: 70, elevation: 20 }, neonOrbTwo: { position: 'absolute', width: 240, height: 240, borderRadius: 140, right: -70, bottom: 70, backgroundColor: CYAN, opacity: 0.13, shadowColor: CYAN, shadowOpacity: 0.9, shadowRadius: 70, elevation: 20 }, neonGrid: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderWidth: 1, borderColor: '#172A4D', opacity: 0.45 }, screen: { flex: 1 }, content: { padding: 16, paddingBottom: 108 }, splash: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }, splashLogoWrap: { alignItems: 'center' }, logoLarge: { width: 116, height: 116, borderRadius: 36, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', shadowColor: PURPLE, shadowOpacity: 0.85, shadowRadius: 28, shadowOffset: { width: 0, height: 0 }, elevation: 18 }, logoLargeImage: { width: 132, height: 132, borderRadius: 40, shadowColor: CYAN, shadowOpacity: 0.75, shadowRadius: 26, shadowOffset: { width: 0, height: 0 }, elevation: 18 }, logoLargeText: { color: '#FFF', fontSize: 68, fontWeight: '900' }, splashTitle: { color: '#FFF', fontSize: 25, fontWeight: '900', letterSpacing: 5, marginTop: 22 }, splashSubtitle: { color: CYAN, fontSize: 11, fontWeight: '800', letterSpacing: 3, marginTop: 7 }, splashSpinner: { marginTop: 24 },
+  safe: { flex: 1, backgroundColor: BG }, app: { flex: 1, backgroundColor: '#050711' }, dashboardCard: { backgroundColor: '#0A1024', borderColor: '#3C2B78', borderRadius: 28, padding: 14, shadowColor: PURPLE, shadowOpacity: 0.28, shadowRadius: 18, elevation: 8 }, dashboardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }, dashboardEyebrow: { color: CYAN, fontSize: 9, fontWeight: '900', letterSpacing: 2 }, dashboardTitle: { color: '#FFF', fontSize: 15, fontWeight: '900', letterSpacing: 1, marginTop: 3 }, livePill: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#6C44C8', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#17113A' }, liveDot: { width: 7, height: 7, borderRadius: 7, backgroundColor: '#34D399', marginRight: 6, shadowColor: '#34D399', shadowOpacity: 0.9, shadowRadius: 6 }, liveText: { color: '#D8C7FF', fontSize: 9, fontWeight: '900', letterSpacing: 1 }, dashboardMetrics: { flexDirection: 'row', justifyContent: 'space-between' }, metricCard: { flex: 1, alignItems: 'center', paddingVertical: 4 }, metricCaption: { color: '#B8B9D6', fontSize: 10, fontWeight: '800', marginBottom: 7 }, metricWrap: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' }, metricRingOuter: { width: 74, height: 74, borderRadius: 40, borderWidth: 3, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.75, shadowRadius: 14, elevation: 7 }, metricRingInner: { width: 58, height: 58, borderRadius: 32, borderWidth: 1, backgroundColor: '#090D1D', alignItems: 'center', justifyContent: 'center' }, metricValue: { color: '#FFF', fontSize: 19, fontWeight: '900' }, metricLabel: { color: '#A7B0C8', fontSize: 8, fontWeight: '800', marginTop: 1 }, metricHint: { color: '#7F86A8', fontSize: 9, marginTop: 6 }, neonBackground: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }, neonOrb: { position: 'absolute', width: 280, height: 280, borderRadius: 160, top: -90, left: -95, backgroundColor: PURPLE, opacity: 0.19, shadowColor: PURPLE, shadowOpacity: 0.9, shadowRadius: 70, elevation: 20 }, neonOrbTwo: { position: 'absolute', width: 240, height: 240, borderRadius: 140, right: -70, bottom: 70, backgroundColor: CYAN, opacity: 0.13, shadowColor: CYAN, shadowOpacity: 0.9, shadowRadius: 70, elevation: 20 }, neonGrid: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderWidth: 1, borderColor: '#172A4D', opacity: 0.45 }, screen: { flex: 1 }, content: { padding: 16, paddingBottom: 108 }, splash: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center' }, splashLogoWrap: { alignItems: 'center' }, logoLarge: { width: 116, height: 116, borderRadius: 36, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', shadowColor: PURPLE, shadowOpacity: 0.85, shadowRadius: 28, shadowOffset: { width: 0, height: 0 }, elevation: 18 }, vStage: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center', position: 'relative' }, vStroke: { position: 'absolute', bottom: 24, width: 12, height: 94, borderRadius: 10, backgroundColor: '#FFFFFF', shadowColor: CYAN, shadowOpacity: 0.95, shadowRadius: 20, elevation: 18 }, vStrokeLeft: { left: 48 }, vStrokeRight: { left: 80 }, vGlow: { position: 'absolute', width: 100, height: 100, borderRadius: 60, borderWidth: 2, borderColor: CYAN, opacity: 0.22, shadowColor: PURPLE, shadowOpacity: 0.9, shadowRadius: 30 }, logoLargeImage: { width: 132, height: 132, borderRadius: 40, shadowColor: CYAN, shadowOpacity: 0.75, shadowRadius: 26, shadowOffset: { width: 0, height: 0 }, elevation: 18 }, logoLargeText: { color: '#FFF', fontSize: 68, fontWeight: '900' }, splashTitle: { color: '#FFF', fontSize: 25, fontWeight: '900', letterSpacing: 5, marginTop: 22 }, splashSubtitle: { color: CYAN, fontSize: 11, fontWeight: '800', letterSpacing: 3, marginTop: 7 }, splashSpinner: { marginTop: 24 },
   hero: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }, eyebrow: { color: CYAN, fontSize: 10, fontWeight: '800', letterSpacing: 2 }, title: { color: '#FFF', fontSize: 24, fontWeight: '900', marginTop: 6 }, subtitle: { color: '#A7B0C8', fontSize: 12, marginTop: 8, maxWidth: 270, lineHeight: 20 }, logo: { width: 58, height: 58, borderRadius: 20, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center', shadowColor: PURPLE, shadowOpacity: 0.7, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } }, logoImage: { width: 62, height: 62, borderRadius: 20, shadowColor: CYAN, shadowOpacity: 0.9, shadowRadius: 18, elevation: 12 }, logoText: { color: '#FFF', fontSize: 32, fontWeight: '900' }, card: { backgroundColor: '#0D1220', borderWidth: 1, borderColor: '#26375B', borderRadius: 26, padding: 16, marginBottom: 14 }, statusCard: { borderColor: '#283542' }, packCard: { borderColor: '#3B2360', backgroundColor: '#12101C' }, packIcon: { color: CYAN, fontSize: 24 }, packStatus: { color: '#34D399', fontSize: 12, fontWeight: '800', marginTop: 10 }, overlayCard: { borderColor: '#174A55', backgroundColor: '#0C171C' }, overlayIcon: { color: CYAN, fontSize: 24 }, row: { flexDirection: 'row', alignItems: 'center', gap: 8 }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, cardTitle: { color: '#F4F7FF', fontSize: 14, fontWeight: '800' }, muted: { color: '#929FBB', fontSize: 12, lineHeight: 19, marginTop: 5 }, dot: { width: 10, height: 10, borderRadius: 8, backgroundColor: '#34D399' }, primaryButton: { backgroundColor: '#7C3AED', borderColor: '#C084FC', borderWidth: 1, borderRadius: 26, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 18 }, primarySmall: { backgroundColor: '#7C3AED', borderColor: '#C084FC', borderWidth: 1, borderRadius: 22, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14 }, primaryText: { color: '#FFF', fontSize: 13, fontWeight: '900' }, outlineButton: { height: 44, alignItems: 'center', justifyContent: 'center', marginTop: 10, borderRadius: 14, borderWidth: 1, borderColor: '#3A3D4A' }, outlineText: { color: '#E7E8EF', fontSize: 13, fontWeight: '800' }, outlineSmall: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginTop: 14, marginLeft: 10, borderWidth: 1, borderColor: '#3A3D4A' }, sectionTitle: { color: '#E8ECFF', fontSize: 11, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginTop: 10, marginBottom: 10 }, bigNumber: { color: '#FFF', fontSize: 30, fontWeight: '900' }, moduleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }, pill: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 99, backgroundColor: '#1B1E29', borderWidth: 1, borderColor: '#2A2D38' }, pillActive: { backgroundColor: '#24104A', borderColor: '#C084FC', shadowColor: PURPLE, shadowOpacity: 0.45, shadowRadius: 8, elevation: 5 }, pillText: { color: MUTED, fontSize: 12, fontWeight: '700' }, pillTextActive: { color: '#F2E8FF' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 }, quick: { width: '47%', minHeight: 86, backgroundColor: '#0D1220', borderColor: '#384B7A', borderRadius: 24, borderWidth: 1, padding: 14, justifyContent: 'space-between' }, quickIcon: { color: CYAN, fontSize: 21, textShadowColor: PURPLE, textShadowRadius: 10 }, quickLabel: { color: '#FFF', fontWeight: '800' }, warning: { borderColor: '#654B12', backgroundColor: '#17140C' }, warningTitle: { color: '#FACC15', fontWeight: '900', fontSize: 13, letterSpacing: 1 }, pageTitle: { color: '#FFF', fontSize: 22, fontWeight: '900', marginBottom: 16 }, input: { backgroundColor: '#10182A', borderRadius: 22, borderWidth: 1, borderColor: '#2B2E3B', color: '#FFF', paddingHorizontal: 14, height: 48, marginTop: 12 }, moduleItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#202330' }, moduleName: { color: '#FFF', fontSize: 15, fontWeight: '800' }, risk: { color: '#FACC15', fontSize: 9, fontWeight: '900', borderWidth: 1, borderColor: '#6B5312', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }, value: { color: '#67E8F9', fontSize: 12, fontWeight: '900' }, slider: { height: 8, borderRadius: 8, backgroundColor: '#292D39', marginTop: 16, overflow: 'hidden' }, sliderTouchArea: { height: 34, justifyContent: 'center', marginTop: 10 }, sliderTrack: { height: 8, borderRadius: 8, backgroundColor: '#292D39', position: 'relative' }, sliderThumb: { position: 'absolute', width: 20, height: 20, borderRadius: 12, top: -6, marginLeft: -10, borderWidth: 3, borderColor: '#FFF', shadowColor: '#FFF', shadowOpacity: 0.4, shadowRadius: 6, elevation: 5 }, sliderFill: { height: 8, borderRadius: 8 }, hudPreview: { height: 220, backgroundColor: '#080B18', borderRadius: 22, borderWidth: 1, borderColor: CYAN, shadowColor: CYAN, shadowOpacity: 0.28, shadowRadius: 18, elevation: 8, marginTop: 16, padding: 12, position: 'relative' }, hudWatermark: { color: PURPLE, fontWeight: '900' }, hudStats: { color: '#FFF', fontSize: 11, marginTop: 7 }, hudArray: { color: '#FFF', fontSize: 12, position: 'absolute', right: 12, top: 12, textAlign: 'right' }, hotbar: { position: 'absolute', bottom: 18, left: 35, right: 35, flexDirection: 'row', gap: 4 }, hotbarItem: { flex: 1, height: 24, backgroundColor: '#262A35', borderWidth: 1, borderColor: '#454A5B' }, colorChoice: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, borderWidth: 2 }, colorLabel: { color: '#FFF', fontSize: 11, fontWeight: '800' }, nav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 78, backgroundColor: '#101219', borderTopWidth: 1, borderTopColor: '#252936', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }, navItem: { alignItems: 'center', justifyContent: 'center', minWidth: 55 }, navIcon: { color: MUTED, fontSize: 22 }, navLabel: { color: MUTED, fontSize: 9, marginTop: 4, fontWeight: '700' },
 });
