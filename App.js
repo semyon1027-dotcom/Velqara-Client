@@ -222,7 +222,12 @@ export default function App() {
       return;
     }
     try {
-      await Overlay.requestOverlayPermission();
+      const granted = await Overlay.requestOverlayPermission();
+      if (!granted) {
+        setOverlayStatus('Разрешение ожидается');
+        Alert.alert('Разрешение оверлея', 'Включи «Показывать поверх других приложений» для Velqara, вернись в приложение и нажми «Включить поверх» ещё раз.');
+        return;
+      }
       await Overlay.startOverlay();
       setOverlayStatus('Оверлей запущен');
     } catch (_) {
