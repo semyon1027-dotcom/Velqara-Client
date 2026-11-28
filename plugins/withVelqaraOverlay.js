@@ -143,12 +143,12 @@ public class VelqaraOverlayService extends Service {
     TextView item = new TextView(this);
     item.setText(text);
     item.setTextColor(Color.WHITE);
-    item.setTextSize(12);
+    item.setTextSize(11);
     item.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
     item.setGravity(Gravity.CENTER_VERTICAL);
-    item.setPadding(18, 12, 18, 12);
+    item.setPadding(14, 9, 14, 9);
     item.setBackground(pill(new int[] { Color.rgb(35, 24, 64), Color.rgb(11, 93, 115) }, 36));
-    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(230, 44);
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(300, 38);
     lp.setMargins(0, 0, 0, 6);
     item.setLayoutParams(lp);
     item.setOnClickListener(v -> item.setText(item.getText().toString().endsWith("ON") ? text + "  OFF" : text + "  ON"));
@@ -191,13 +191,17 @@ public class VelqaraOverlayService extends Service {
     menu.setPadding(8, 60, 8, 8);
     menu.setVisibility(View.GONE);
     menu.setBackground(pill(new int[] { Color.rgb(12, 10, 30), Color.rgb(10, 37, 53) }, 28));
-    FrameLayout.LayoutParams menuLp = new FrameLayout.LayoutParams(246, 280, Gravity.TOP | Gravity.END);
+    FrameLayout.LayoutParams menuLp = new FrameLayout.LayoutParams(330, 500, Gravity.TOP | Gravity.END);
     root.addView(menu, menuLp);
-    menu.addView(row("Fulbright"));
+    menu.addView(row("VELQARA CLIENT  •  MENU"));
+    menu.addView(row("VISUALS  •  Fulbright"));
     menu.addView(row("Swing animation"));
-    menu.addView(row("Hit particles"));
     menu.addView(row("Custom FOV"));
-    menu.addView(row("Watermark"));
+    menu.addView(row("Hit particles"));
+    menu.addView(row("WORLD  •  Item ESP"));
+    menu.addView(row("TNT timer"));
+    menu.addView(row("HUD  •  Watermark"));
+    menu.addView(row("Array list"));
     TextView close = row("Закрыть меню");
     close.setOnClickListener(v -> menu.setVisibility(View.GONE));
     menu.addView(close);
@@ -211,7 +215,7 @@ public class VelqaraOverlayService extends Service {
       }
     });
     int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
-    params = new WindowManager.LayoutParams(246, 280, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
+    params = new WindowManager.LayoutParams(330, 500, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT);
     params.gravity = Gravity.TOP | Gravity.END;
     params.x = 16; params.y = 90;
     try { windowManager.addView(root, params); } catch (Exception error) { stopSelf(); }
