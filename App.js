@@ -355,7 +355,7 @@ export default function App() {
           <Text style={[styles.hudStats, { fontSize: 9 + sliderValues.menuSize / 55 }]}>FPS 120   CPS 8   BPS 4.2   ESP {Math.round(sliderValues.espDistance)}m</Text>
           <Text style={styles.hudArray}>Watermark{enabled['Array list'] ? '\nArray list' : ''}</Text>
           <View style={styles.hotbar}><View/><View/><View/><View/><View/><View/><View/><View/><View/></View>
-        </View>
+        </Animated.View>
       </Card>
       <Card><View style={styles.rowBetween}><Text style={styles.cardTitle}>Размер меню</Text><Text style={styles.value}>{Math.round(sliderValues.menuSize)}%</Text></View><RangeSlider value={sliderValues.menuSize} min={75} max={125} onChange={(v) => changeSlider('menuSize', v)} accent={accent} /></Card>
       <Card><View style={styles.rowBetween}><Text style={styles.cardTitle}>Прозрачность HUD</Text><Text style={styles.value}>{Math.round(sliderValues.hudOpacity)}%</Text></View><RangeSlider value={sliderValues.hudOpacity} min={0} max={100} onChange={(v) => changeSlider('hudOpacity', v)} accent={accent} /></Card>
