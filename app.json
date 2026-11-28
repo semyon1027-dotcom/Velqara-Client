@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Velqara Neon Client",
+    "name": "Velqara Client",
     "slug": "velqara-client",
-    "version": "0.2.0",
+    "version": "0.3.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.velqara.client",
-      "versionCode": 2,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/velqara_icon.png",
         "backgroundColor": "#08090D"
